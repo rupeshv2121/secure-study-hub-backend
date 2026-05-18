@@ -1,5 +1,7 @@
+import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 import { env } from "../../config/env";
+import { prisma } from "../../lib/prisma";
 import { loginSchema, registerSchema } from "./auth.schema";
 import { createFromSupabase, login, register } from "./auth.service";
 
@@ -36,12 +38,10 @@ export const webhookFromSupabaseController = async (
   const supabaseId = user?.id ?? user?.user_id ?? user?.uid ?? null;
 
   if (!email) {
-    res
-      .status(400)
-      .json({
-        success: false,
-        message: "Missing user email in webhook payload",
-      });
+    res.status(400).json({
+      success: false,
+      message: "Missing user email in webhook payload",
+    });
     return;
   }
 
@@ -98,4 +98,37 @@ export const syncFromSupabaseController = async (
   const user = await createFromSupabase({ email, name: name || "" });
 
   res.status(201).json({ success: true, message: "User synced", data: user });
+};
+
+export const updateMeController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const user = req.user as any;
+  if (!user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+
+  const { name, password } = req.body as { name?: string; password?: string };
+  const updates: any = {};
+  if (typeof name === "string") updates.name = name;
+  if (typeof password === "string" && password.length > 0) {
+    const hash = await bcrypt.hash(password, 10);
+    updates.passwordHash = hash;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    res.json({ success: true, data: null });
+    return;
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: updates,
+  });
+  res.json({
+    success: true,
+    data: { id: updated.id, name: updated.name, email: updated.email },
+  });
 };
