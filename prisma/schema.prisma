@@ -29,6 +29,9 @@ model Subject {
   title       String
   slug        String    @unique
   description String?
+  isActive    Boolean   @default(true)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
   lectures    Lecture[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -53,13 +56,14 @@ model Lecture {
 }
 
 model Category {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   icon        String?
   color       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  subjects    Subject[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model LectureSlide {

@@ -2,8 +2,9 @@ import { z } from "zod";
 
 export const createSubjectSchema = z.object({
   title: z.string().min(1),
-  slug: z.string().min(1),
   description: z.string().optional(),
+  categoryId: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const updateSubjectSchema = createSubjectSchema.partial();

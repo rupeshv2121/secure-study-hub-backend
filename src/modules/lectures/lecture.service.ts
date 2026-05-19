@@ -5,12 +5,28 @@ export const listLectures = async (subjectId?: string) => {
   const where = subjectId ? { where: { subjectId } } : {};
   return prisma.lecture.findMany({
     ...(where as object),
+    include: {
+      subject: {
+        include: {
+          category: true,
+        },
+      },
+    },
     orderBy: { order: "asc" },
   });
 };
 
 export const getLecture = async (id: string) => {
-  return prisma.lecture.findUnique({ where: { id } });
+  return prisma.lecture.findUnique({
+    where: { id },
+    include: {
+      subject: {
+        include: {
+          category: true,
+        },
+      },
+    },
+  });
 };
 
 export const createLecture = async (payload: CreateLectureInput) => {
