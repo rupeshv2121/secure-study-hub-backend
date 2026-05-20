@@ -21,6 +21,13 @@ Required variables:
 - `JWT_EXPIRES_IN`
 - `CORS_ORIGIN`
 
+Optional for slide uploads and signed URLs:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Lecture slides are stored in private Supabase Storage buckets and delivered through signed URLs.
+
 ## 3. Start PostgreSQL (optional with Docker)
 
 ```bash
