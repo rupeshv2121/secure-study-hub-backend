@@ -17,7 +17,7 @@ const normalizeStoragePath = (value: string) => {
   return normalized;
 };
 
-const resolveBucketPath = (bucket: string, value: string) => {
+export const resolveBucketPath = (bucket: string, value: string) => {
   const normalized = normalizeStoragePath(value);
   const prefix = `${bucket}/`;
 
@@ -160,4 +160,58 @@ export const createSignedUrlForBucket = async (
     signedUrl: data.signedUrl,
     expiresIn: SIGNED_URL_EXPIRY_SECONDS,
   };
+};
+
+export const uploadBufferToBucket = async (
+  bucket: string,
+  buffer: Buffer,
+  destRawPath: string,
+  contentType?: string,
+) => {
+  if (!bucket) throw new AppError("Bucket is required", 400);
+  if (!buffer || !Buffer.isBuffer(buffer)) throw new AppError("Buffer is required", 400);
+  if (!destRawPath) throw new AppError("Destination path is required", 400);
+
+  // Normalize and strip bucket prefix if present
+  const normalized = normalizeStoragePath(destRawPath);
+  const prefix = `${bucket}/`;
+  let storagePath = normalized;
+  if (normalized === bucket) throw new AppError("Invalid storage path", 400);
+  if (normalized.startsWith(prefix)) {
+    storagePath = normalized.slice(prefix.length);
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+    let result = await supabase.storage.from(bucket).upload(storagePath, buffer, {
+      contentType: contentType || "application/octet-stream",
+      upsert: true,
+    });
+
+    if (
+      result.error &&
+      String(result.error.message).toLowerCase().includes("bucket")
+    ) {
+      try {
+        await supabase.storage.createBucket(bucket, { public: false });
+        result = await supabase.storage.from(bucket).upload(storagePath, buffer, {
+          contentType: contentType || "application/octet-stream",
+          upsert: true,
+        });
+      } catch (createErr) {
+        // fall through
+        result = result;
+      }
+    }
+
+    if (result.error) {
+      const msg = result.error.message || "Failed to upload buffer";
+      const isQuota = String(msg).toLowerCase().includes("quota") || String(msg).toLowerCase().includes("exceed");
+      throw new AppError(`Failed to upload buffer: ${msg}`, isQuota ? 413 : 500);
+    }
+
+    return { path: storagePath };
+  } catch (e) {
+    throw e;
+  }
 };

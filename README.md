@@ -52,6 +52,21 @@ Backend base URL:
 - `http://localhost:4000`
 - health check: `GET /api/health`
 
+## Deploying on Vercel
+
+Deploy the backend as its own Vercel project with the project root set to `secure-study-hub-backend`.
+
+Set these environment variables in Vercel:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `CORS_ORIGIN` with your frontend Vercel URL, or a comma-separated list of allowed origins
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` if slide upload and signed URL features are enabled
+- `GOOGLE_SERVICE_ACCOUNT_JSON` if Google Drive integration is enabled
+
+The upload route uses ephemeral storage under `/tmp` on Vercel, so uploaded files are only temporary before being pushed to Supabase Storage.
+
 ## Available endpoints
 
 - `POST /api/auth/register`

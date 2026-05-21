@@ -1,5 +1,7 @@
 import { Router } from "express";
+import fs from "fs";
 import multer from "multer";
+import path from "path";
 import { adminOnly, authMiddleware } from "../../middlewares/auth.middleware";
 import { asyncHandler } from "../../utils/async-handler";
 import {
@@ -10,7 +12,13 @@ import {
 
 const router = Router();
 
-const upload = multer({ dest: "tmp/uploads" });
+const uploadDir = process.env.VERCEL
+  ? path.join("/tmp", "uploads")
+  : path.join("tmp", "uploads");
+
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const upload = multer({ dest: uploadDir });
 
 router.post(
   "/:bucket/upload",
@@ -29,6 +37,16 @@ router.get(
   "/:bucket/signed-url",
   authMiddleware,
   asyncHandler(signedUrlController),
+);
+
+// Debug: check if an object exists under a bucket (lists parent folder and searches)
+router.get(
+  "/:bucket/exists",
+  authMiddleware,
+  asyncHandler(async (req, res) => {
+    const { existsController } = await import("./storage.controller");
+    return existsController(req, res);
+  }),
 );
 
 export { router as storageRouter };

@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import { env } from "./config/env";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { notFoundMiddleware } from "./middlewares/not-found.middleware";
 import { router } from "./routes";
@@ -14,7 +15,9 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
-const allowedOrigins = "http://localhost:8080,http://localhost:8081".split(",");
+const allowedOrigins = env.CORS_ORIGIN.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 console.log("CORS allowlist:", allowedOrigins);
 app.use(
   cors({

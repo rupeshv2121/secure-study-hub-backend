@@ -50,7 +50,105 @@ export const signedUrlController = async (req: Request, res: Response) => {
   if (!pathValue) {
     throw new AppError("path query parameter is required", 400);
   }
+  try {
+    const data = await createSignedUrlForBucket(bucket, String(pathValue));
+    res.json({ success: true, data });
+  } catch (err) {
+    const e = err as any;
+    // If object not found, provide diagnostic details to help debugging
+    if (
+      e?.status === 404 ||
+      String(e?.message || "")
+        .toLowerCase()
+        .includes("not_found") ||
+      String(e?.message || "")
+        .toLowerCase()
+        .includes("object not found")
+    ) {
+      try {
+        const storagePath = resolveBucketPath(bucket, String(pathValue));
+        const parts = storagePath.split("/");
+        const filename = parts.pop() || "";
+        const parent = parts.join("/");
+        const supabase = (
+          await import("../../lib/supabase")
+        ).getSupabaseClient();
+        const listRes = await supabase.storage
+          .from(bucket)
+          .list(parent || "", { limit: 1000 });
 
-  const data = await createSignedUrlForBucket(bucket, String(pathValue));
-  res.json({ success: true, data });
+        return res.status(404).json({
+          success: false,
+          message: e?.message || "Object not found",
+          attemptedPath: storagePath,
+          parent,
+          filename,
+          items: (listRes.data || []).slice(0, 50),
+        });
+      } catch (inner) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message: e?.message || "Object not found",
+            attemptedPath: String(pathValue),
+          });
+      }
+    }
+
+    throw err;
+  }
+};
+
+export const existsController = async (req: Request, res: Response) => {
+  const bucket = String(req.params.bucket);
+  const rawPath = req.query.path;
+  const pathValue = Array.isArray(rawPath) ? rawPath[0] : rawPath;
+
+  if (!pathValue) {
+    throw new AppError("path query parameter is required", 400);
+  }
+
+  // Use service helpers to resolve normalized storage path
+  const { resolveBucketPath } = await import("./storage.service");
+  const supabaseClient = await import("../../lib/supabase");
+
+  try {
+    const storagePath = resolveBucketPath(bucket, String(pathValue));
+
+    // split to parent folder and filename
+    const parts = storagePath.split("/");
+    const filename = parts.pop() || "";
+    const parent = parts.join("/");
+
+    const supabase = (await import("../../lib/supabase")).getSupabaseClient();
+    // list parent folder
+    const listRes = await supabase.storage
+      .from(bucket)
+      .list(parent || "", { limit: 1000 });
+
+    if (listRes.error) {
+      throw new AppError(listRes.error.message || "Failed to list bucket", 500);
+    }
+
+    const found = (listRes.data || []).some(
+      (item: any) => item.name === filename,
+    );
+
+    res.json({
+      success: true,
+      data: {
+        exists: found,
+        attemptedPath: storagePath,
+        parent,
+        filename,
+        items: (listRes.data || []).slice(0, 50),
+      },
+    });
+  } catch (err) {
+    const e = err as any;
+    res
+      .status(e?.status || 500)
+      .json({ success: false, message: e?.message || String(e) });
+  }
 };

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { authRouter } from "../modules/auth/auth.routes";
 import { categoryRouter } from "../modules/categories/category.routes";
+import { externalRouter } from "../modules/external/external.routes";
 import { lectureRouter } from "../modules/lectures/lecture.routes";
 import { lectureSlideRouter } from "../modules/lectureSlides/slides.routes";
 import { purchaseRouter } from "../modules/purchases/purchase.routes";
@@ -25,6 +26,7 @@ router.use("/lectures", lectureRouter);
 router.use("/lecture-slides", lectureSlideRouter);
 router.use("/view-logs", viewLogsRouter);
 router.use("/storage", storageRouter);
+router.use("/external", externalRouter);
 router.use("/purchases", purchaseRouter);
 
 // Protected demo endpoint - returns current user
