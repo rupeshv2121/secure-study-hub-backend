@@ -1,8 +1,10 @@
 import type { Request, Response } from "express";
 import { AppError } from "../../utils/app-error";
+import { getSupabaseClient } from "../../lib/supabase";
 import {
   createSignedUrlForBucket,
   removeFilesFromBucket,
+  resolveBucketPath,
   uploadFileToBucket,
 } from "./storage.service";
 
@@ -70,14 +72,12 @@ export const signedUrlController = async (req: Request, res: Response) => {
         const parts = storagePath.split("/");
         const filename = parts.pop() || "";
         const parent = parts.join("/");
-        const supabase = (
-          await import("../../lib/supabase")
-        ).getSupabaseClient();
+        const supabase = getSupabaseClient();
         const listRes = await supabase.storage
           .from(bucket)
           .list(parent || "", { limit: 1000 });
 
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: e?.message || "Object not found",
           attemptedPath: storagePath,
@@ -85,14 +85,14 @@ export const signedUrlController = async (req: Request, res: Response) => {
           filename,
           items: (listRes.data || []).slice(0, 50),
         });
+        return;
       } catch (inner) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message: e?.message || "Object not found",
-            attemptedPath: String(pathValue),
-          });
+        res.status(404).json({
+          success: false,
+          message: e?.message || "Object not found",
+          attemptedPath: String(pathValue),
+        });
+        return;
       }
     }
 
@@ -109,10 +109,6 @@ export const existsController = async (req: Request, res: Response) => {
     throw new AppError("path query parameter is required", 400);
   }
 
-  // Use service helpers to resolve normalized storage path
-  const { resolveBucketPath } = await import("./storage.service");
-  const supabaseClient = await import("../../lib/supabase");
-
   try {
     const storagePath = resolveBucketPath(bucket, String(pathValue));
 
@@ -121,7 +117,7 @@ export const existsController = async (req: Request, res: Response) => {
     const filename = parts.pop() || "";
     const parent = parts.join("/");
 
-    const supabase = (await import("../../lib/supabase")).getSupabaseClient();
+    const supabase = getSupabaseClient();
     // list parent folder
     const listRes = await supabase.storage
       .from(bucket)

@@ -5,6 +5,7 @@ import path from "path";
 import { adminOnly, authMiddleware } from "../../middlewares/auth.middleware";
 import { asyncHandler } from "../../utils/async-handler";
 import {
+  existsController,
   removeController,
   signedUrlController,
   uploadController,
@@ -43,10 +44,7 @@ router.get(
 router.get(
   "/:bucket/exists",
   authMiddleware,
-  asyncHandler(async (req, res) => {
-    const { existsController } = await import("./storage.controller");
-    return existsController(req, res);
-  }),
+  asyncHandler(existsController),
 );
 
 export { router as storageRouter };

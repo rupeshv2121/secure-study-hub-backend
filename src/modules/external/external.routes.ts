@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { env } from "../../config/env";
 import { authMiddleware, adminOnly } from "../../middlewares/auth.middleware";
-import { streamDriveFile } from "./drive.controller";
-import { importDriveFile } from "./drive.controller";
+import {
+  getDriveMetadata,
+  importDriveFile,
+  streamDriveFile,
+} from "./drive.controller";
 
 const router = Router();
 
@@ -37,7 +40,6 @@ if (env.NODE_ENV === "development") {
   // Metadata check endpoint (dev only) - returns JSON about file and permissions
   router.get("/drive/:id/meta", async (req, res, next) => {
     try {
-      const { getDriveMetadata } = await import("./drive.controller");
       await getDriveMetadata(req, res, next as any);
     } catch (e) {
       next(e);

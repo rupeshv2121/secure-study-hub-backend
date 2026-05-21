@@ -29,7 +29,8 @@ export const streamDriveFile = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const fileId = req.params.id;
+  const rawFileId = req.params.id;
+  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
   if (!fileId) {
     return next(new AppError("file id is required", 400));
   }
@@ -39,7 +40,10 @@ export const streamDriveFile = async (
 
     // Try to fetch metadata to set Content-Type and filename
     try {
-      const meta = await drive.files.get({ fileId, fields: "mimeType,name" });
+      const meta = (await drive.files.get({
+        fileId,
+        fields: "mimeType,name",
+      })) as any;
       const mime = meta.data.mimeType || "application/pdf";
       const name = meta.data.name || fileId;
       res.setHeader("Content-Type", mime);
@@ -48,10 +52,10 @@ export const streamDriveFile = async (
       // ignore metadata errors and continue
     }
 
-    const resp = await drive.files.get(
+    const resp = (await drive.files.get(
       { fileId, alt: "media" },
       { responseType: "stream" as any },
-    );
+    )) as any;
 
     (resp.data as any).on("error", (err: unknown) => {
       next(new AppError(String(err || "Failed to stream file"), 500));
@@ -68,15 +72,16 @@ export const getDriveMetadata = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const fileId = req.params.id;
+  const rawFileId = req.params.id;
+  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
   if (!fileId) return next(new AppError("file id is required", 400));
 
   try {
     const drive = getDriveClient();
-    const meta = await drive.files.get({
+    const meta = (await drive.files.get({
       fileId,
       fields: "id,name,mimeType,owners,size,permissions",
-    });
+    })) as any;
     res.json({ success: true, data: meta.data });
   } catch (e) {
     next(e);
@@ -88,7 +93,8 @@ export const importDriveFile = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const fileId = req.params.id;
+  const rawFileId = req.params.id;
+  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
   if (!fileId) return next(new AppError("file id is required", 400));
 
   const bucket = String((req.body as any)?.bucket || req.query.bucket || "lecture-slides");
@@ -101,7 +107,10 @@ export const importDriveFile = async (
     // Fetch metadata to determine filename and mime
     let meta: any = null;
     try {
-      meta = await drive.files.get({ fileId, fields: "name,mimeType" });
+      meta = (await drive.files.get({
+        fileId,
+        fields: "name,mimeType",
+      })) as any;
     } catch (mErr) {
       // continue without name
     }
@@ -110,7 +119,10 @@ export const importDriveFile = async (
     const mime = (meta?.data?.mimeType as string) || "application/octet-stream";
 
     // download file as stream and buffer it
-    const resp = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" as any });
+    const resp = (await drive.files.get(
+      { fileId, alt: "media" },
+      { responseType: "stream" as any },
+    )) as any;
 
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
