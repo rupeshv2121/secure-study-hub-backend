@@ -1,4 +1,3 @@
 {
-    "buildCommand": "npm run prisma:generate && npm run build",
-    "functions": {}
+    "buildCommand": "npm run prisma:generate && npm run build"
 }
