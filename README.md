@@ -67,6 +67,18 @@ Set these environment variables in Vercel:
 
 The upload route uses ephemeral storage under `/tmp` on Vercel, so uploaded files are only temporary before being pushed to Supabase Storage.
 
+## Deploying on Render
+
+Deploy the backend as a Render web service with the project root set to `secure-study-hub-backend`.
+
+Use these settings:
+
+- Build command: `npm install && npm run prisma:generate && npm run build`
+- Start command: `npm start`
+- Environment variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `GOOGLE_SERVICE_ACCOUNT_JSON` if needed
+
+The included [render.yaml](render.yaml) sets the same build and start commands so Render does not fall back to `npm install` alone.
+
 ## Available endpoints
 
 - `POST /api/auth/register`
