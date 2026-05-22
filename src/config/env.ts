@@ -13,6 +13,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

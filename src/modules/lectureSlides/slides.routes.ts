@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-router.get("/", asyncHandler(listController)); // ?lectureId=...
+router.get("/", authMiddleware, asyncHandler(listController)); // ?lectureId=...
 router.post("/", authMiddleware, asyncHandler(createController));
 router.delete("/:id", authMiddleware, asyncHandler(deleteController));
 

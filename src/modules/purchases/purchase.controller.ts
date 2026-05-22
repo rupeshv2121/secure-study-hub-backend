@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createPurchaseSchema } from "./purchase.schema";
+import { createPurchaseSchema, reviewPurchaseSchema } from "./purchase.schema";
 import * as service from "./purchase.service";
 
 export const createController = async (
@@ -8,7 +8,16 @@ export const createController = async (
 ): Promise<void> => {
   const userId = req.user!.id;
   const payload = createPurchaseSchema.parse(req.body);
-  const created = await service.createPurchase(userId, payload);
+  const screenshotFile = (req as any).file as Express.Multer.File | undefined;
+
+  if (!screenshotFile) {
+    res
+      .status(400)
+      .json({ success: false, message: "Payment screenshot is required" });
+    return;
+  }
+
+  const created = await service.createPurchase(userId, payload, screenshotFile);
   res.status(201).json({ success: true, data: created });
 };
 
@@ -41,4 +50,14 @@ export const listController = async (
   }
   const data = await service.listPurchasesForUser(req.user!.id);
   res.json({ success: true, data });
+};
+
+export const reviewController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const id = String(req.params.id);
+  const payload = reviewPurchaseSchema.parse(req.body);
+  const updated = await service.reviewPurchase(id, req.user!.id, payload);
+  res.json({ success: true, data: updated });
 };

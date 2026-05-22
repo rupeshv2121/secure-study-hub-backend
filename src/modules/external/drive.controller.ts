@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
+import fs from "fs";
 import { google } from "googleapis";
+import { Readable } from "stream";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/app-error";
 import { uploadBufferToBucket } from "../storage/storage.service";
@@ -18,10 +20,34 @@ const getDriveClient = () => {
 
   const auth = new google.auth.GoogleAuth({
     credentials: creds,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+    scopes: ["https://www.googleapis.com/auth/drive"],
   });
 
   return google.drive({ version: "v3", auth });
+};
+
+const extractDriveFileId = (value: string) => {
+  const input = String(value || "").trim();
+  if (!input) return "";
+
+  const driveMatch = input.match(/(?:drive:|\/d\/|id=)([a-zA-Z0-9_-]{10,})/);
+  if (driveMatch?.[1]) return driveMatch[1];
+
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(input)) return input;
+
+  return input;
+};
+
+const collectFileBuffer = async (fileStream: NodeJS.ReadableStream) => {
+  const chunks: Buffer[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fileStream.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+    fileStream.on("end", () => resolve());
+    fileStream.on("error", (err: unknown) => reject(err));
+  });
+
+  return Buffer.concat(chunks);
 };
 
 export const streamDriveFile = async (
@@ -30,7 +56,7 @@ export const streamDriveFile = async (
   next: NextFunction,
 ) => {
   const rawFileId = req.params.id;
-  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
+  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
   if (!fileId) {
     return next(new AppError("file id is required", 400));
   }
@@ -73,7 +99,7 @@ export const getDriveMetadata = async (
   next: NextFunction,
 ) => {
   const rawFileId = req.params.id;
-  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
+  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
   if (!fileId) return next(new AppError("file id is required", 400));
 
   try {
@@ -94,11 +120,15 @@ export const importDriveFile = async (
   next: NextFunction,
 ) => {
   const rawFileId = req.params.id;
-  const fileId = Array.isArray(rawFileId) ? rawFileId[0] : rawFileId;
+  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
   if (!fileId) return next(new AppError("file id is required", 400));
 
-  const bucket = String((req.body as any)?.bucket || req.query.bucket || "lecture-slides");
-  const lectureId = String((req.body as any)?.lectureId || req.query.lectureId || "");
+  const bucket = String(
+    (req.body as any)?.bucket || req.query.bucket || "lecture-slides",
+  );
+  const lectureId = String(
+    (req.body as any)?.lectureId || req.query.lectureId || "",
+  );
   const destFilename = (req.body as any)?.filename || req.query.filename;
 
   try {
@@ -136,14 +166,62 @@ export const importDriveFile = async (
     // decide destination path
     let filenameToUse = destFilename || name || `${fileId}.pdf`;
     // try to preserve extension if missing
-    if (!filenameToUse.includes('.') && mime === 'application/pdf') filenameToUse = `${filenameToUse}.pdf`;
+    if (!filenameToUse.includes(".") && mime === "application/pdf")
+      filenameToUse = `${filenameToUse}.pdf`;
 
-    const destPath = lectureId ? `${lectureId}/${filenameToUse}` : filenameToUse;
+    const destPath = lectureId
+      ? `${lectureId}/${filenameToUse}`
+      : filenameToUse;
 
     const result = await uploadBufferToBucket(bucket, buffer, destPath, mime);
 
-    res.status(201).json({ success: true, data: { path: `${bucket}/${result.path}` } });
+    res
+      .status(201)
+      .json({ success: true, data: { path: `${bucket}/${result.path}` } });
   } catch (e) {
     next(e);
+  }
+};
+
+export const uploadDriveFile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const file = (req as any).file as Express.Multer.File | undefined;
+  if (!file?.path) {
+    return next(new AppError("file is required", 400));
+  }
+
+  try {
+    const drive = getDriveClient();
+    const buffer = await collectFileBuffer(fs.createReadStream(file.path));
+
+    const folderId =
+      (req.body as any)?.folderId || env.GOOGLE_DRIVE_FOLDER_ID || undefined;
+
+    const uploadResponse = await drive.files.create({
+      requestBody: {
+        name: file.originalname || file.filename || "upload.pdf",
+        mimeType: file.mimetype || "application/octet-stream",
+        ...(folderId ? { parents: [String(folderId)] } : {}),
+      },
+      media: {
+        mimeType: file.mimetype || "application/octet-stream",
+        body: Readable.from([buffer]),
+      },
+      fields: "id,name,mimeType,webViewLink,webContentLink",
+    });
+
+    res.status(201).json({
+      success: true,
+      data: uploadResponse.data,
+    });
+  } catch (e) {
+    next(e);
+  } finally {
+    try {
+      require("fs").unlinkSync(file.path);
+    } catch {}
   }
 };

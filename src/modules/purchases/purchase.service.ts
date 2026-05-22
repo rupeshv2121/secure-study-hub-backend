@@ -1,36 +1,170 @@
 import { prisma } from "../../lib/prisma";
-import type { CreatePurchaseInput } from "./purchase.schema";
+import type {
+  CreatePurchaseInput,
+  ReviewPurchaseInput,
+} from "./purchase.schema";
+
+const enrichPurchase = async (purchase: any) => {
+  let screenshotUrl: string | null = null;
+
+  if (purchase?.screenshotPath) {
+    if (String(purchase.screenshotPath).startsWith("data:")) {
+      screenshotUrl = purchase.screenshotPath;
+    } else {
+      screenshotUrl = purchase.screenshotPath;
+    }
+  }
+
+  return {
+    ...purchase,
+    screenshotUrl,
+  };
+};
 
 export const createPurchase = async (
   userId: string,
   payload: CreatePurchaseInput,
+  screenshotFile?: Express.Multer.File,
 ) => {
-  // In a real app you'd call a payment provider here and set status accordingly
+  let screenshotPath: string | null = null;
+
+  if (screenshotFile) {
+    const mimeType = screenshotFile.mimetype || "application/octet-stream";
+    screenshotPath = `data:${mimeType};base64,${screenshotFile.buffer.toString(
+      "base64",
+    )}`;
+  }
+
   return prisma.purchase.create({
     data: {
       userId,
-      lectureId: payload.lectureId,
+      subjectId: payload.subjectId,
       amount: payload.amount,
       currency: payload.currency,
-      metadata: payload.metadata,
+      screenshotPath: screenshotPath ?? undefined,
+      metadata: payload.note ? { note: payload.note } : undefined,
     },
   });
 };
 
 export const getPurchase = async (id: string) => {
-  return prisma.purchase.findUnique({
+  const purchase = await prisma.purchase.findUnique({
     where: { id },
-    include: { lecture: true, user: true },
+    include: {
+      lecture: {
+        include: {
+          subject: {
+            include: { category: true },
+          },
+        },
+      },
+      subject: {
+        include: { category: true },
+      },
+      user: true,
+      reviewedBy: true,
+    },
   });
+
+  return purchase ? enrichPurchase(purchase) : null;
 };
 
 export const listPurchasesForUser = async (userId: string) => {
-  return prisma.purchase.findMany({
+  const purchases = await prisma.purchase.findMany({
     where: { userId },
-    include: { lecture: true },
+    include: {
+      lecture: {
+        include: {
+          subject: {
+            include: { category: true },
+          },
+        },
+      },
+      subject: {
+        include: { category: true },
+      },
+      reviewedBy: true,
+    },
+    orderBy: { createdAt: "desc" },
   });
+
+  return Promise.all(purchases.map((purchase) => enrichPurchase(purchase)));
 };
 
 export const listAllPurchases = async () => {
-  return prisma.purchase.findMany({ include: { lecture: true, user: true } });
+  const purchases = await prisma.purchase.findMany({
+    include: {
+      lecture: {
+        include: {
+          subject: {
+            include: { category: true },
+          },
+        },
+      },
+      subject: {
+        include: { category: true },
+      },
+      user: true,
+      reviewedBy: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return Promise.all(purchases.map((purchase) => enrichPurchase(purchase)));
+};
+
+export const reviewPurchase = async (
+  purchaseId: string,
+  _reviewerId: string,
+  payload: ReviewPurchaseInput,
+) => {
+  const purchase = await prisma.purchase.update({
+    where: { id: purchaseId },
+    data: {
+      status: payload.status,
+      adminNote: payload.adminNote,
+      reviewedAt: new Date(),
+    },
+    include: {
+      lecture: {
+        include: {
+          subject: {
+            include: { category: true },
+          },
+        },
+      },
+      subject: {
+        include: { category: true },
+      },
+      user: true,
+      reviewedBy: true,
+    },
+  });
+
+  return enrichPurchase(purchase);
+};
+
+export const hasApprovedSubjectAccess = async (
+  userId: string,
+  subjectId: string,
+) => {
+  const purchase = await prisma.purchase.findFirst({
+    where: {
+      userId,
+      status: {
+        in: ["APPROVED", "COMPLETED"],
+      },
+      OR: [
+        { subjectId },
+        {
+          lecture: {
+            subjectId,
+          },
+        },
+      ],
+    },
+    select: { id: true },
+  });
+
+  return Boolean(purchase);
 };

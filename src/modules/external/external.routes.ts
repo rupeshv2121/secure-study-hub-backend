@@ -1,13 +1,23 @@
 import { Router } from "express";
+import fs from "fs";
+import multer from "multer";
+import path from "path";
 import { env } from "../../config/env";
-import { authMiddleware, adminOnly } from "../../middlewares/auth.middleware";
+import { adminOnly, authMiddleware } from "../../middlewares/auth.middleware";
 import {
   getDriveMetadata,
   importDriveFile,
   streamDriveFile,
+  uploadDriveFile,
 } from "./drive.controller";
 
 const router = Router();
+const uploadDir = process.env.VERCEL
+  ? path.join("/tmp", "uploads")
+  : path.join("tmp", "uploads");
+
+fs.mkdirSync(uploadDir, { recursive: true });
+const upload = multer({ dest: uploadDir });
 
 // Stream a Google Drive file through the backend (requires auth)
 router.get("/drive/:id/stream", authMiddleware, async (req, res, next) => {
@@ -19,13 +29,33 @@ router.get("/drive/:id/stream", authMiddleware, async (req, res, next) => {
 });
 
 // Import a Drive file into storage (admin only)
-router.post("/drive/:id/import", authMiddleware, adminOnly, async (req, res, next) => {
-  try {
-    await importDriveFile(req, res, next as any);
-  } catch (e) {
-    next(e);
-  }
-});
+router.post(
+  "/drive/:id/import",
+  authMiddleware,
+  adminOnly,
+  async (req, res, next) => {
+    try {
+      await importDriveFile(req, res, next as any);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// Upload a file directly to Google Drive (admin only)
+router.post(
+  "/drive/upload",
+  authMiddleware,
+  adminOnly,
+  upload.single("file"),
+  async (req, res, next) => {
+    try {
+      await uploadDriveFile(req, res, next as any);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 // Development-only debug route (no auth) for quick local testing
 if (env.NODE_ENV === "development") {

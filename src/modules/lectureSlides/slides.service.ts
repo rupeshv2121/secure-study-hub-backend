@@ -8,6 +8,17 @@ export const listSlidesForLecture = async (lectureId: string) => {
   });
 };
 
+export const getLectureForAccessCheck = async (lectureId: string) => {
+  return prisma.lecture.findUnique({
+    where: { id: lectureId },
+    select: {
+      id: true,
+      subjectId: true,
+      price: true,
+    },
+  });
+};
+
 export const createSlide = async (payload: CreateSlideInput) => {
   return prisma.lectureSlide.create({
     data: {
