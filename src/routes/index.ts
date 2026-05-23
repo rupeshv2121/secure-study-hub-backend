@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { adminOnly, authMiddleware } from "../middlewares/auth.middleware";
 import { updateMeController } from "../modules/auth/auth.controller";
 import { authRouter } from "../modules/auth/auth.routes";
 import { categoryRouter } from "../modules/categories/category.routes";
@@ -71,5 +71,68 @@ router.put("/me", authMiddleware, async (req, res, next) => {
     next(e);
   }
 });
+
+// Admin stats endpoint used by the admin dashboard
+router.get(
+  "/admin/stats",
+  authMiddleware,
+  adminOnly,
+  async (req, res, next) => {
+    try {
+      // aggregate totals
+      const totalUsers = await prisma.user.count();
+      const totalLectures = await prisma.lecture.count();
+      const totalCategories = await prisma.category.count();
+
+      const viewsSum = await prisma.lecture.aggregate({
+        _sum: { viewCount: true },
+      });
+      const totalViews = (viewsSum._sum.viewCount as number) || 0;
+
+      // recent view logs (10 most recent) with lecture title and user email
+      const recentLogs = await prisma.viewLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+      const userIds = Array.from(new Set(recentLogs.map((r) => r.userId)));
+      const lectureIds = Array.from(
+        new Set(recentLogs.map((r) => r.lectureId)),
+      );
+
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, email: true },
+      });
+      const lectures = await prisma.lecture.findMany({
+        where: { id: { in: lectureIds } },
+        select: { id: true, title: true },
+      });
+
+      const usersMap = new Map(users.map((u) => [u.id, u.email]));
+      const lecturesMap = new Map(lectures.map((l) => [l.id, l.title]));
+
+      const recentViews = recentLogs.map((r) => ({
+        lecture_id: r.lectureId,
+        lecture_title: lecturesMap.get(r.lectureId) || "Unknown",
+        user_id: r.userId,
+        user_email: usersMap.get(r.userId) || "Unknown",
+        viewed_at: r.createdAt,
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          totalUsers,
+          totalLectures,
+          totalCategories,
+          totalViews,
+          recentViews,
+        },
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 export { router };
