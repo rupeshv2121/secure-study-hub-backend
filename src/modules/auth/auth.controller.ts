@@ -88,14 +88,22 @@ export const syncFromSupabaseController = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { email, name } = req.body as { email: string; name?: string };
+  const { email, name, phoneNumber } = req.body as {
+    email: string;
+    name?: string;
+    phoneNumber?: string;
+  };
 
   if (!email) {
     res.status(400).json({ success: false, message: "Email is required" });
     return;
   }
 
-  const user = await createFromSupabase({ email, name: name || "" });
+  const user = await createFromSupabase({
+    email,
+    name: name || "",
+    phoneNumber,
+  });
 
   res.status(201).json({ success: true, message: "User synced", data: user });
 };
@@ -110,9 +118,14 @@ export const updateMeController = async (
     return;
   }
 
-  const { name, password } = req.body as { name?: string; password?: string };
+  const { name, phoneNumber, password } = req.body as {
+    name?: string;
+    phoneNumber?: string;
+    password?: string;
+  };
   const updates: any = {};
   if (typeof name === "string") updates.name = name;
+  if (typeof phoneNumber === "string") updates.phoneNumber = phoneNumber;
   if (typeof password === "string" && password.length > 0) {
     const hash = await bcrypt.hash(password, 10);
     updates.passwordHash = hash;
@@ -129,6 +142,11 @@ export const updateMeController = async (
   });
   res.json({
     success: true,
-    data: { id: updated.id, name: updated.name, email: updated.email },
+    data: {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      phoneNumber: updated.phoneNumber,
+    },
   });
 };

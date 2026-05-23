@@ -11,6 +11,7 @@ type SafeUser = {
   name: string;
   email: string;
   role: "STUDENT" | "ADMIN";
+  phoneNumber?: string | null;
 };
 
 const createToken = (user: SafeUser): string => {
@@ -40,12 +41,14 @@ export const register = async (payload: RegisterInput) => {
     data: {
       name: payload.name,
       email: payload.email,
+      phoneNumber: payload.phoneNumber || null,
       passwordHash,
     },
     select: {
       id: true,
       name: true,
       email: true,
+      phoneNumber: true,
       role: true,
     },
   });
@@ -78,6 +81,7 @@ export const login = async (payload: LoginInput) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    phoneNumber: user.phoneNumber,
   };
 
   return {
@@ -90,12 +94,36 @@ export const createFromSupabase = async (payload: {
   supabaseId?: string;
   email: string;
   name?: string;
+  phoneNumber?: string;
 }) => {
   const existing = payload.supabaseId
     ? await prisma.user.findFirst({ where: { supabaseId: payload.supabaseId } })
     : await prisma.user.findUnique({ where: { email: payload.email } });
 
   if (existing) {
+    const nextName = payload.name || existing.name;
+    const nextPhoneNumber = payload.phoneNumber ?? existing.phoneNumber ?? null;
+
+    if (
+      nextName !== existing.name ||
+      nextPhoneNumber !== existing.phoneNumber
+    ) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name: nextName,
+          phoneNumber: nextPhoneNumber,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phoneNumber: true,
+          role: true,
+        },
+      });
+    }
+
     return existing;
   }
 
@@ -108,12 +136,14 @@ export const createFromSupabase = async (payload: {
       name: payload.name || "",
       email: payload.email,
       supabaseId: payload.supabaseId,
+      phoneNumber: payload.phoneNumber || null,
       passwordHash,
     },
     select: {
       id: true,
       name: true,
       email: true,
+      phoneNumber: true,
       role: true,
     },
   });
