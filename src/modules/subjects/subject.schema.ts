@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createSubjectSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  price: z.coerce.number().nonnegative().optional(),
   categoryId: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
 });

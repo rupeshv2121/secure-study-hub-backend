@@ -31,6 +31,7 @@ model Subject {
   title       String
   slug        String     @unique
   description String?
+  price       Float      @default(0)
   isActive    Boolean    @default(true)
   categoryId  String?
   category    Category?  @relation(fields: [categoryId], references: [id])

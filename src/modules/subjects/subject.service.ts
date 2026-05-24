@@ -51,6 +51,7 @@ export const createSubject = async (payload: CreateSubjectInput) => {
       title: payload.title,
       slug,
       description: payload.description,
+      price: payload.price,
       categoryId: payload.categoryId,
       isActive: payload.isActive,
     },
