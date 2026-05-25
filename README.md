@@ -76,6 +76,7 @@ Use these settings:
 - Build command: `npm install --include=dev && npm run prisma:generate && npm run build`
 - Start command: `npm run prisma:deploy && npm start`
 - Environment variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `GOOGLE_SERVICE_ACCOUNT_JSON` if needed
+- Do not hardcode `PORT` on Render; let the platform inject the port for the web service
 
 The included [render.yaml](render.yaml) sets the same build and start commands so Render does not fall back to `npm install` alone.
 
