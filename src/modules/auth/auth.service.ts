@@ -68,10 +68,11 @@ export const login = async (payload: LoginInput) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  const isValidPassword = await bcrypt.compare(
-    payload.password,
-    user.passwordHash,
-  );
+  if (typeof user.passwordHash !== "string" || user.passwordHash.length === 0) {
+    throw new AppError("Invalid email or password", 401);
+  }
+
+  const isValidPassword = await bcrypt.compare(payload.password, user.passwordHash);
   if (!isValidPassword) {
     throw new AppError("Invalid email or password", 401);
   }
@@ -95,6 +96,7 @@ export const createFromSupabase = async (payload: {
   email: string;
   name?: string;
   phoneNumber?: string;
+  password?: string;
 }) => {
   const existing = payload.supabaseId
     ? await prisma.user.findFirst({ where: { supabaseId: payload.supabaseId } })
@@ -103,16 +105,21 @@ export const createFromSupabase = async (payload: {
   if (existing) {
     const nextName = payload.name || existing.name;
     const nextPhoneNumber = payload.phoneNumber ?? existing.phoneNumber ?? null;
+    const nextPasswordHash = payload.password
+      ? await bcrypt.hash(payload.password, 10)
+      : null;
 
     if (
       nextName !== existing.name ||
-      nextPhoneNumber !== existing.phoneNumber
+      nextPhoneNumber !== existing.phoneNumber ||
+      nextPasswordHash
     ) {
       return prisma.user.update({
         where: { id: existing.id },
         data: {
           name: nextName,
           phoneNumber: nextPhoneNumber,
+          ...(nextPasswordHash ? { passwordHash: nextPasswordHash } : {}),
         },
         select: {
           id: true,
@@ -128,8 +135,8 @@ export const createFromSupabase = async (payload: {
   }
 
   // Create a random password hash so the DB field is populated.
-  const random = crypto.randomBytes(32).toString("hex");
-  const passwordHash = await bcrypt.hash(random, 10);
+  const passwordSource = payload.password ?? crypto.randomBytes(32).toString("hex");
+  const passwordHash = await bcrypt.hash(passwordSource, 10);
 
   const user = await prisma.user.create({
     data: {

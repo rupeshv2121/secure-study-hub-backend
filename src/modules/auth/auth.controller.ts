@@ -92,6 +92,7 @@ export const syncFromSupabaseController = async (
     email: string;
     name?: string;
     phoneNumber?: string;
+    password?: string;
   };
 
   if (!email) {
@@ -103,6 +104,7 @@ export const syncFromSupabaseController = async (
     email,
     name: name || "",
     phoneNumber,
+    password: (req.body as { password?: string }).password,
   });
 
   res.status(201).json({ success: true, message: "User synced", data: user });
