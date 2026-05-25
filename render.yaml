@@ -3,7 +3,7 @@ services:
     name: secure-study-hub-backend
     env: node
     plan: starter
-    rootDir: .
+    rootDir: secure-study-hub-backend
     buildCommand: npm install --include=dev && npm run prisma:generate && npm run build
     startCommand: npm run prisma:deploy && npm start
     envVars:
