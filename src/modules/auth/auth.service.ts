@@ -72,7 +72,10 @@ export const login = async (payload: LoginInput) => {
     throw new AppError("Invalid email or password", 401);
   }
 
-  const isValidPassword = await bcrypt.compare(payload.password, user.passwordHash);
+  const isValidPassword = await bcrypt.compare(
+    payload.password,
+    user.passwordHash,
+  );
   if (!isValidPassword) {
     throw new AppError("Invalid email or password", 401);
   }
@@ -135,7 +138,8 @@ export const createFromSupabase = async (payload: {
   }
 
   // Create a random password hash so the DB field is populated.
-  const passwordSource = payload.password ?? crypto.randomBytes(32).toString("hex");
+  const passwordSource =
+    payload.password ?? crypto.randomBytes(32).toString("hex");
   const passwordHash = await bcrypt.hash(passwordSource, 10);
 
   const user = await prisma.user.create({
