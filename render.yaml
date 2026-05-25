@@ -5,7 +5,8 @@ services:
     plan: starter
     rootDir: secure-study-hub-backend
     buildCommand: npm install --include=dev && npm run prisma:generate && npm run build
-    startCommand: npm run prisma:deploy && npm start
+    preDeployCommand: npm run prisma:deploy
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
