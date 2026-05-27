@@ -56,7 +56,9 @@ export const streamDriveFile = async (
   next: NextFunction,
 ) => {
   const rawFileId = req.params.id;
-  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
+  const fileId = extractDriveFileId(
+    Array.isArray(rawFileId) ? rawFileId[0] : rawFileId,
+  );
   if (!fileId) {
     return next(new AppError("file id is required", 400));
   }
@@ -99,7 +101,9 @@ export const getDriveMetadata = async (
   next: NextFunction,
 ) => {
   const rawFileId = req.params.id;
-  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
+  const fileId = extractDriveFileId(
+    Array.isArray(rawFileId) ? rawFileId[0] : rawFileId,
+  );
   if (!fileId) return next(new AppError("file id is required", 400));
 
   try {
@@ -119,8 +123,13 @@ export const importDriveFile = async (
   res: Response,
   next: NextFunction,
 ) => {
+  if (!req.user) return next(new AppError("Not authenticated", 401));
+  if (req.user.role !== "ADMIN")
+    return next(new AppError("Admin privileges required", 403));
   const rawFileId = req.params.id;
-  const fileId = extractDriveFileId(Array.isArray(rawFileId) ? rawFileId[0] : rawFileId);
+  const fileId = extractDriveFileId(
+    Array.isArray(rawFileId) ? rawFileId[0] : rawFileId,
+  );
   if (!fileId) return next(new AppError("file id is required", 400));
 
   const bucket = String(
@@ -188,6 +197,9 @@ export const uploadDriveFile = async (
   res: Response,
   next: NextFunction,
 ) => {
+  if (!req.user) return next(new AppError("Not authenticated", 401));
+  if (req.user.role !== "ADMIN")
+    return next(new AppError("Admin privileges required", 403));
   const file = (req as any).file as Express.Multer.File | undefined;
   if (!file?.path) {
     return next(new AppError("file is required", 400));

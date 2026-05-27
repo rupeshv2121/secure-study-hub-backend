@@ -56,6 +56,16 @@ export const reviewController = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+  if (req.user.role !== "ADMIN") {
+    res
+      .status(403)
+      .json({ success: false, message: "Admin privileges required" });
+    return;
+  }
   const id = String(req.params.id);
   const payload = reviewPurchaseSchema.parse(req.body);
   const updated = await service.reviewPurchase(id, req.user!.id, payload);

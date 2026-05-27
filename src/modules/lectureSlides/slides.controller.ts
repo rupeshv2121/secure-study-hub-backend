@@ -38,12 +38,32 @@ export const listController = async (req: Request, res: Response) => {
 };
 
 export const createController = async (req: Request, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+  if (req.user.role !== "ADMIN") {
+    res
+      .status(403)
+      .json({ success: false, message: "Admin privileges required" });
+    return;
+  }
   const payload = createSlideSchema.parse(req.body);
   const created = await service.createSlide(payload);
   res.status(201).json({ success: true, data: created });
 };
 
 export const deleteController = async (req: Request, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+  if (req.user.role !== "ADMIN") {
+    res
+      .status(403)
+      .json({ success: false, message: "Admin privileges required" });
+    return;
+  }
   const id = String(req.params.id);
   await service.deleteSlide(id);
   res.json({ success: true });

@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { AppError } from "../../utils/app-error";
 import { createCategorySchema, updateCategorySchema } from "./category.schema";
 import * as service from "./category.service";
 
@@ -14,12 +15,18 @@ export const getController = async (req: Request, res: Response) => {
 };
 
 export const createController = async (req: Request, res: Response) => {
+  if (!req.user) throw new AppError("Not authenticated", 401);
+  if (req.user.role !== "ADMIN")
+    throw new AppError("Admin privileges required", 403);
   const payload = createCategorySchema.parse(req.body);
   const created = await service.createCategory(payload);
   res.status(201).json({ success: true, data: created });
 };
 
 export const updateController = async (req: Request, res: Response) => {
+  if (!req.user) throw new AppError("Not authenticated", 401);
+  if (req.user.role !== "ADMIN")
+    throw new AppError("Admin privileges required", 403);
   const id = String(req.params.id);
   const payload = updateCategorySchema.parse(req.body);
   const updated = await service.updateCategory(id, payload);
@@ -27,6 +34,9 @@ export const updateController = async (req: Request, res: Response) => {
 };
 
 export const deleteController = async (req: Request, res: Response) => {
+  if (!req.user) throw new AppError("Not authenticated", 401);
+  if (req.user.role !== "ADMIN")
+    throw new AppError("Admin privileges required", 403);
   const id = String(req.params.id);
   await service.deleteCategory(id);
   res.json({ success: true });

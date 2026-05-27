@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../../middlewares/auth.middleware";
+import { adminOnly, authMiddleware } from "../../middlewares/auth.middleware";
 import { asyncHandler } from "../../utils/async-handler";
 import {
   createController,
@@ -10,7 +10,12 @@ import {
 const router = Router();
 
 router.get("/", authMiddleware, asyncHandler(listController)); // ?lectureId=...
-router.post("/", authMiddleware, asyncHandler(createController));
-router.delete("/:id", authMiddleware, asyncHandler(deleteController));
+router.post("/", authMiddleware, adminOnly, asyncHandler(createController));
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminOnly,
+  asyncHandler(deleteController),
+);
 
 export { router as lectureSlideRouter };

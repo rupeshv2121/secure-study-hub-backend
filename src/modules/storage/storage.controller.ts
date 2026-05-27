@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { AppError } from "../../utils/app-error";
 import { getSupabaseClient } from "../../lib/supabase";
+import { AppError } from "../../utils/app-error";
 import {
   createSignedUrlForBucket,
   removeFilesFromBucket,
@@ -9,6 +9,16 @@ import {
 } from "./storage.service";
 
 export const uploadController = async (req: Request, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+  if (req.user.role !== "ADMIN") {
+    res
+      .status(403)
+      .json({ success: false, message: "Admin privileges required" });
+    return;
+  }
   const file = (req as any).file as any;
   const bucket = String(req.params.bucket);
   const prefixFromBody = (req.body as any)?.prefix as string | undefined;
@@ -32,6 +42,16 @@ export const uploadController = async (req: Request, res: Response) => {
 };
 
 export const removeController = async (req: Request, res: Response) => {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: "Not authenticated" });
+    return;
+  }
+  if (req.user.role !== "ADMIN") {
+    res
+      .status(403)
+      .json({ success: false, message: "Admin privileges required" });
+    return;
+  }
   const bucket = String(req.params.bucket);
   const paths = (req.body as any)?.paths as string[] | undefined;
   if (!paths || !Array.isArray(paths)) {
