@@ -4,7 +4,9 @@ import { createSubjectSchema, updateSubjectSchema } from "./subject.schema";
 import * as service from "./subject.service";
 
 export const listController = async (req: Request, res: Response) => {
-  const data = await service.listSubjects();
+  const includeInactive =
+    req.query.includeInactive === "true" && req.user?.role === "ADMIN";
+  const data = await service.listSubjects(includeInactive);
   res.json({ success: true, data });
 };
 

@@ -30,8 +30,9 @@ const createUniqueSlug = async (title: string, excludeId?: string) => {
   }
 };
 
-export const listSubjects = async () => {
+export const listSubjects = async (includeInactive = false) => {
   return prisma.subject.findMany({
+    where: includeInactive ? undefined : { isActive: true },
     include: { lectures: true, category: true },
   });
 };
