@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// A blank Vercel/Netlify env var arrives as "" (not undefined), which fails
+// validators like .email() and .url(). Treat empty/whitespace-only values as
+// "unset" so a stray blank variable can't crash the whole app at boot.
+const emptyToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? undefined : v;
+
+// Optional email that degrades to `undefined` (notifications simply skipped)
+// instead of throwing when the configured value is blank or malformed — a mail
+// misconfiguration must never take down the API.
+const optionalNotificationEmail = z
+  .preprocess(emptyToUndefined, z.string().trim().email().optional())
+  .catch(undefined);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -16,9 +29,12 @@ const envSchema = z.object({
   GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
   // Email notifications (Resend). When RESEND_API_KEY is unset, emails are
   // skipped (logged only) so the app keeps working in dev/local.
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default("Secure Study Hub <onboarding@resend.dev>"),
-  ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
+  RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  EMAIL_FROM: z.preprocess(
+    emptyToUndefined,
+    z.string().default("Secure Study Hub <onboarding@resend.dev>"),
+  ),
+  ADMIN_NOTIFICATION_EMAIL: optionalNotificationEmail,
 });
 
 const parsed = envSchema.safeParse(process.env);
