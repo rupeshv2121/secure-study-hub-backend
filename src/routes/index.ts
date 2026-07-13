@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { envIssues } from "../config/env";
 import { prisma } from "../lib/prisma";
 import { adminOnly, authMiddleware } from "../middlewares/auth.middleware";
 import { updateMeController } from "../modules/auth/auth.controller";
@@ -16,6 +17,14 @@ import { viewLogsRouter } from "../modules/viewLogs/viewLogs.routes";
 const router = Router();
 
 router.get("/health", (_req, res) => {
+  if (envIssues) {
+    res.status(500).json({
+      success: false,
+      message: "Backend booted but environment is misconfigured",
+      envIssues,
+    });
+    return;
+  }
   res.status(200).json({
     success: true,
     message: "Secure Study Hub backend is running",
