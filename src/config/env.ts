@@ -32,7 +32,7 @@ const envSchema = z.object({
   RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   EMAIL_FROM: z.preprocess(
     emptyToUndefined,
-    z.string().default("Secure Study Hub <donot-reply@outfromcumfurt.com>"),
+    z.string().default("Secure Study Hub <onboarding@resend.dev>"),
   ),
   ADMIN_NOTIFICATION_EMAIL: optionalNotificationEmail,
 });
