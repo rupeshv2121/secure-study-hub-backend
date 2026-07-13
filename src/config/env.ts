@@ -14,6 +14,11 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
+  // Email notifications (Resend). When RESEND_API_KEY is unset, emails are
+  // skipped (logged only) so the app keeps working in dev/local.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("Secure Study Hub <onboarding@resend.dev>"),
+  ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

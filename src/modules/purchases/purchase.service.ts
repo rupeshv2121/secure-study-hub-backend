@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { notifyAdminOfPurchaseRequest } from "./purchase.notifications";
 import type {
   CreatePurchaseInput,
   ReviewPurchaseInput,
@@ -35,7 +36,7 @@ export const createPurchase = async (
     )}`;
   }
 
-  return prisma.purchase.create({
+  const purchase = await prisma.purchase.create({
     data: {
       userId,
       subjectId: payload.subjectId,
@@ -45,6 +46,11 @@ export const createPurchase = async (
       metadata: payload.note ? { note: payload.note } : undefined,
     },
   });
+
+  // Email the admin that a new purchase is awaiting approval. Never throws.
+  await notifyAdminOfPurchaseRequest(purchase.id);
+
+  return purchase;
 };
 
 export const getPurchase = async (id: string) => {
