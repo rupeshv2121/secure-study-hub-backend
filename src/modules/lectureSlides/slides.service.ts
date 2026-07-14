@@ -15,6 +15,7 @@ export const getLectureForAccessCheck = async (lectureId: string) => {
       id: true,
       subjectId: true,
       price: true,
+      subject: { select: { price: true } },
     },
   });
 };

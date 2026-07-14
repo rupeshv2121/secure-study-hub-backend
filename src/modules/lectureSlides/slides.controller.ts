@@ -23,9 +23,13 @@ export const listController = async (req: Request, res: Response) => {
     const allowed = subjectId
       ? await purchaseService.hasApprovedSubjectAccess(user.id, subjectId)
       : false;
-    const isFreeLecture = (lecture.price ?? 0) === 0;
+    // Gate on the SUBJECT: a free subject (price 0) is open, a paid one needs an
+    // approved purchase. Lecture price defaults to 0 so it must not decide access.
+    // Fails closed if the subject price is somehow missing.
+    const isFreeSubject =
+      (lecture.subject?.price ?? Number.POSITIVE_INFINITY) <= 0;
 
-    if (!allowed && !isFreeLecture) {
+    if (!allowed && !isFreeSubject) {
       res
         .status(403)
         .json({ success: false, message: "Purchase approval required" });
