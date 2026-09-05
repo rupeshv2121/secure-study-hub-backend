@@ -102,7 +102,6 @@ src/
 └─ utils/                    # AppError, asyncHandler
 ```
 
-`api/` holds the Vercel serverless entrypoints (`index.ts` and the `[...path].ts` catch-all) that wrap the same `app`.
 
 ### Middleware chain
 
@@ -128,8 +127,6 @@ flowchart LR
 ---
 
 ## API surface
-
-Base URL `<host>/api`. All responses use `{ success, data | message }`. Auth is `Authorization: Bearer <jwt>`.
 
 **Legend** — `pub` public, `auth` authenticated, `admin` admin only.
 
@@ -169,8 +166,6 @@ Base URL `<host>/api`. All responses use `{ success, data | message }`. Auth is 
 | POST | `/external/drive/upload` | admin | Upload straight to Drive |
 | GET | `/external/drive/:id/meta`, `/debug`, `/external/test` | pub | **`NODE_ENV=development` only** — Drive diagnostics and a test viewer page |
 | GET | `/admin/stats` | admin | Totals plus the 10 most recent views |
-
-> The `/external/drive/*` debug routes are registered **only** when `NODE_ENV === "development"`. They are unauthenticated by design for local testing, so never run a production deployment with `NODE_ENV=development`.
 
 ---
 
