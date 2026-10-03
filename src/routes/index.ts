@@ -16,6 +16,24 @@ import { viewLogsRouter } from "../modules/viewLogs/viewLogs.routes";
 
 const router = Router();
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
+
+// "Active" = opened at least one lecture in the window; lecture views are the
+// only per-user activity the database records.
+const countActiveUsers = async (since: Date) => {
+  const rows = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(DISTINCT "userId") AS count FROM "ViewLog" WHERE "createdAt" >= ${since}`;
+  return Number(rows[0]?.count ?? 0);
+};
+
+const countPayingUsers = async () => {
+  const rows = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(DISTINCT "userId") AS count FROM "Purchase"
+    WHERE "status" IN ('APPROVED', 'COMPLETED')`;
+  return Number(rows[0]?.count ?? 0);
+};
+
 router.get("/health", (_req, res) => {
   if (envIssues) {
     res.status(500).json({
@@ -95,6 +113,20 @@ router.get(
       const totalLectures = await prisma.lecture.count();
       const totalCategories = await prisma.category.count();
 
+      const [
+        activeUsers24h,
+        activeUsers7d,
+        activeUsers30d,
+        newUsers30d,
+        payingUsers,
+      ] = await Promise.all([
+        countActiveUsers(daysAgo(1)),
+        countActiveUsers(daysAgo(7)),
+        countActiveUsers(daysAgo(30)),
+        prisma.user.count({ where: { createdAt: { gte: daysAgo(30) } } }),
+        countPayingUsers(),
+      ]);
+
       const viewsSum = await prisma.lecture.aggregate({
         _sum: { viewCount: true },
       });
@@ -134,6 +166,11 @@ router.get(
         success: true,
         data: {
           totalUsers,
+          activeUsers24h,
+          activeUsers7d,
+          activeUsers30d,
+          newUsers30d,
+          payingUsers,
           totalLectures,
           totalCategories,
           totalViews,

@@ -163,6 +163,13 @@ export const updateMeController = async (
   if (typeof name === "string") updates.name = name;
   if (typeof phoneNumber === "string") updates.phoneNumber = phoneNumber;
   if (typeof password === "string" && password.length > 0) {
+    if (password.length < 8) {
+      res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters",
+      });
+      return;
+    }
     const hash = await bcrypt.hash(password, 10);
     updates.passwordHash = hash;
   }

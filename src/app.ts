@@ -10,6 +10,11 @@ import { router } from "./routes";
 
 const app = express();
 
+// Vercel and Render sit one proxy hop in front of the app. Trusting that hop
+// makes req.ip the real client address (used by rate limiting) instead of
+// the proxy's, which would put every user in the same bucket.
+app.set("trust proxy", 1);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
