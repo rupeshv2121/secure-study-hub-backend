@@ -60,6 +60,35 @@ router.use("/storage", storageRouter);
 router.use("/external", externalRouter);
 router.use("/purchases", purchaseRouter);
 
+// Public, aggregate-only counts for the homepage. No personal data; cached
+// briefly by browsers/CDNs so it can't be used to hammer the database.
+router.get("/stats/public", async (_req, res, next) => {
+  try {
+    const [students, subjects, lectures, views] = await Promise.all([
+      prisma.user.count({ where: { role: "STUDENT" } }),
+      prisma.subject.count({ where: { isActive: true } }),
+      prisma.lecture.count({ where: { published: true } }),
+      prisma.lecture.aggregate({
+        _sum: { viewCount: true },
+        where: { published: true },
+      }),
+    ]);
+
+    res.set("Cache-Control", "public, max-age=300");
+    res.json({
+      success: true,
+      data: {
+        students,
+        subjects,
+        lectures,
+        views: views._sum.viewCount ?? 0,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Protected profile endpoint - returns persisted current user profile
 router.get("/me", authMiddleware, async (req, res, next) => {
   try {
