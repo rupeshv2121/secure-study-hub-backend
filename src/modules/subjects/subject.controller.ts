@@ -6,13 +6,16 @@ import * as service from "./subject.service";
 export const listController = async (req: Request, res: Response) => {
   const includeInactive =
     req.query.includeInactive === "true" && req.user?.role === "ADMIN";
-  const data = await service.listSubjects(includeInactive);
+  const data = await service.listSubjects(
+    includeInactive,
+    req.user?.role === "ADMIN",
+  );
   res.json({ success: true, data });
 };
 
 export const getController = async (req: Request, res: Response) => {
   const id = String(req.params.id);
-  const item = await service.getSubject(id);
+  const item = await service.getSubject(id, req.user?.role === "ADMIN");
   res.json({ success: true, data: item });
 };
 

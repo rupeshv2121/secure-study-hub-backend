@@ -11,6 +11,19 @@ const getResend = (): Resend | null => {
   return resendClient;
 };
 
+export const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+// Public URL of the web app, for links in emails. CORS_ORIGIN may be a
+// comma-separated list; the first origin is used.
+export const appBaseUrl = (): string =>
+  (env.CORS_ORIGIN.split(",")[0] ?? "").trim().replace(/\/$/, "");
+
 export interface SendMailOptions {
   to: string | string[];
   subject: string;

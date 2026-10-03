@@ -1,20 +1,8 @@
 import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
-import { sendMail } from "../../lib/email";
+import { appBaseUrl, escapeHtml, sendMail } from "../../lib/email";
 
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const adminPanelUrl = (): string => {
-  // CORS_ORIGIN may be a comma-separated list; use the first origin.
-  const base = env.CORS_ORIGIN.split(",")[0]?.trim().replace(/\/$/, "");
-  return `${base}/admin`;
-};
+const adminPanelUrl = (): string => `${appBaseUrl()}/admin`;
 
 /**
  * Notify the admin that a student has submitted a new purchase request.

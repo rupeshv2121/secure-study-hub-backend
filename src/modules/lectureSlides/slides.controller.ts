@@ -19,6 +19,11 @@ export const listController = async (req: Request, res: Response) => {
   }
 
   if (user.role !== "ADMIN") {
+    if (!lecture.published) {
+      res.status(404).json({ success: false, message: "Lecture not found" });
+      return;
+    }
+
     const subjectId = lecture.subjectId;
     const allowed = subjectId
       ? await purchaseService.hasApprovedSubjectAccess(user.id, subjectId)

@@ -30,17 +30,24 @@ const createUniqueSlug = async (title: string, excludeId?: string) => {
   }
 };
 
-export const listSubjects = async (includeInactive = false) => {
+// Embedded lectures follow the same draft rule as GET /lectures.
+const lecturesInclude = (includeDrafts: boolean) =>
+  includeDrafts ? true : { where: { published: true } };
+
+export const listSubjects = async (
+  includeInactive = false,
+  includeDrafts = false,
+) => {
   return prisma.subject.findMany({
     where: includeInactive ? undefined : { isActive: true },
-    include: { lectures: true, category: true },
+    include: { lectures: lecturesInclude(includeDrafts), category: true },
   });
 };
 
-export const getSubject = async (id: string) => {
+export const getSubject = async (id: string, includeDrafts = false) => {
   return prisma.subject.findUnique({
     where: { id },
-    include: { lectures: true },
+    include: { lectures: lecturesInclude(includeDrafts) },
   });
 };
 

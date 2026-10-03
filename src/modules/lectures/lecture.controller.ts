@@ -5,13 +5,17 @@ import * as service from "./lecture.service";
 
 export const listController = async (req: Request, res: Response) => {
   const subjectId = req.query.subjectId as string | undefined;
-  const data = await service.listLectures(subjectId);
+  const data = await service.listLectures(
+    subjectId,
+    req.user?.role === "ADMIN",
+  );
   res.json({ success: true, data });
 };
 
 export const getController = async (req: Request, res: Response) => {
   const id = String(req.params.id);
-  const item = await service.getLecture(id);
+  const item = await service.getLecture(id, req.user?.role === "ADMIN");
+  if (!item) throw new AppError("Lecture not found", 404);
   res.json({ success: true, data: item });
 };
 

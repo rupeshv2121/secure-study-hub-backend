@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { adminOnly, authMiddleware } from "../../middlewares/auth.middleware";
+import {
+  adminOnly,
+  authMiddleware,
+  optionalAuth,
+} from "../../middlewares/auth.middleware";
 import { asyncHandler } from "../../utils/async-handler";
 import {
   createController,
@@ -11,8 +15,8 @@ import {
 
 const router = Router();
 
-router.get("/", asyncHandler(listController));
-router.get("/:id", asyncHandler(getController));
+router.get("/", optionalAuth, asyncHandler(listController));
+router.get("/:id", optionalAuth, asyncHandler(getController));
 router.post("/", authMiddleware, adminOnly, asyncHandler(createController));
 router.put("/:id", authMiddleware, adminOnly, asyncHandler(updateController));
 router.delete(
