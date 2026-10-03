@@ -27,6 +27,26 @@ export const authMiddleware = (
   }
 };
 
+// For public routes whose response depends on who is asking (e.g. admins also
+// see draft lectures). Attaches req.user when a valid token is present and
+// otherwise continues anonymously — it never rejects the request.
+export const optionalAuth = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    try {
+      const payload = jwt.verify(header.split(" ", 2)[1], env.JWT_SECRET) as any;
+      req.user = { id: payload.sub, email: payload.email, role: payload.role };
+    } catch {
+      // invalid or expired token: treat as anonymous
+    }
+  }
+  next();
+};
+
 export const adminOnly = (req: Request, _res: Response, next: NextFunction) => {
   if (!req.user) {
     throw new AppError("Not authenticated", 401);

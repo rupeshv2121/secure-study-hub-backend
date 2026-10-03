@@ -2,8 +2,19 @@ import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
-import { loginSchema, registerSchema } from "./auth.schema";
-import { createFromSupabase, login, register } from "./auth.service";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "./auth.schema";
+import {
+  createFromSupabase,
+  login,
+  register,
+  requestPasswordReset,
+  resetPassword,
+} from "./auth.service";
 
 // Webhook handler for Supabase Auth events
 export const webhookFromSupabaseController = async (
@@ -82,6 +93,29 @@ export const loginController = async (
     message: "Login successful",
     data: result,
   });
+};
+
+export const forgotPasswordController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { email } = forgotPasswordSchema.parse(req.body);
+  await requestPasswordReset(email);
+
+  res.status(200).json({
+    success: true,
+    message: "If an account exists for that email, a reset link has been sent",
+  });
+};
+
+export const resetPasswordController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const payload = resetPasswordSchema.parse(req.body);
+  await resetPassword(payload);
+
+  res.status(200).json({ success: true, message: "Password updated" });
 };
 
 export const syncFromSupabaseController = async (

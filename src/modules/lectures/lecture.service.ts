@@ -1,10 +1,14 @@
 import { prisma } from "../../lib/prisma";
 import type { CreateLectureInput, UpdateLectureInput } from "./lecture.schema";
 
-export const listLectures = async (subjectId?: string) => {
-  const where = subjectId ? { where: { subjectId } } : {};
+// Drafts (published: false) are only returned when includeDrafts is set, which
+// callers must restrict to admins.
+export const listLectures = async (subjectId?: string, includeDrafts = false) => {
   return prisma.lecture.findMany({
-    ...(where as object),
+    where: {
+      ...(subjectId ? { subjectId } : {}),
+      ...(includeDrafts ? {} : { published: true }),
+    },
     include: {
       subject: {
         include: {
@@ -16,9 +20,9 @@ export const listLectures = async (subjectId?: string) => {
   });
 };
 
-export const getLecture = async (id: string) => {
-  return prisma.lecture.findUnique({
-    where: { id },
+export const getLecture = async (id: string, includeDrafts = false) => {
+  return prisma.lecture.findFirst({
+    where: { id, ...(includeDrafts ? {} : { published: true }) },
     include: {
       subject: {
         include: {
