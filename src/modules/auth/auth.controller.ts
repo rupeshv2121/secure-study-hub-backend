@@ -154,10 +154,11 @@ export const updateMeController = async (
     return;
   }
 
-  const { name, phoneNumber, password } = req.body as {
+  const { name, phoneNumber, password, currentPassword } = req.body as {
     name?: string;
     phoneNumber?: string;
     password?: string;
+    currentPassword?: string;
   };
   const updates: any = {};
   if (typeof name === "string") updates.name = name;
@@ -167,6 +168,32 @@ export const updateMeController = async (
       res.status(400).json({
         success: false,
         message: "Password must be at least 8 characters",
+      });
+      return;
+    }
+
+    // A stolen or unattended session must not be enough to take over the
+    // account. 400 rather than 401: the session itself is still valid.
+    const existing = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { passwordHash: true },
+    });
+    const currentOk =
+      typeof currentPassword === "string" &&
+      currentPassword.length > 0 &&
+      !!existing?.passwordHash &&
+      (await bcrypt.compare(currentPassword, existing.passwordHash));
+    if (!currentOk) {
+      res.status(400).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+      return;
+    }
+    if (currentPassword === password) {
+      res.status(400).json({
+        success: false,
+        message: "New password must be different from the current one",
       });
       return;
     }
